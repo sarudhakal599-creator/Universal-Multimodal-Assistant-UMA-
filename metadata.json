@@ -1,0 +1,5 @@
+{
+  "name": "Universal Multimodal Assistant (UMA)",
+  "description": "A high-speed, bilingual (Nepali/English) assistant with live vision, voice, and image generation capabilities.",
+  "requestFramePermissions": ["camera", "microphone"]
+}
