@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Conversations ---
+    function isValidConversation(data) {
+      return data.userId is string 
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() <= 500
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    match /conversations/{conversationId} {
+      allow get: if isSignedIn() && isOwner(existing().userId) && isValidId(conversationId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidId(conversationId)
+        && isValidConversation(incoming())
+        && incoming().keys().hasAll(['userId', 'title', 'createdAt', 'updatedAt'])
+        && incoming().keys().size() == 4;
+
+      allow update: if isSignedIn()
+        && isOwner(existing().userId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt'])
+        );
+
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+
+      // --- Messages ---
+      function isValidMessage(data) {
+        return data.conversationId == conversationId
+          && data.role in ['user', 'model', 'system']
+          && data.content is string && data.content.size() <= 50000
+          && data.createdAt == request.time;
+      }
+
+      match /messages/{messageId} {
+        allow list: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid;
+        allow get: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid;
+        
+        allow create: if isSignedIn()
+          && isValidId(messageId)
+          && get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid
+          && isValidMessage(incoming())
+          && incoming().createdAt == request.time;
+          
+        // Messages are usually immutable in this app, or only content might update if editing is allowed.
+        // For now, let's keep them simple.
+        allow delete: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid;
+      }
+    }
+  }
+}

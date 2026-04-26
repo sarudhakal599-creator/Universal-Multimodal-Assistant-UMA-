@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Conversation": {
+      "title": "A chat session",
+      "description": "Represents a collection of messages between a user and the AI.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who owns this conversation." },
+        "title": { "type": "string", "description": "Display title for the conversation." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "A single message in a conversation",
+      "description": "Contains the text or multimodal content of a message.",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "model", "system"] },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "image", "audio", "file"] },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "groundingUrls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "uri": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["conversationId", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Root collection for chat sessions."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Subcollection for messages within a specific conversation."
+    }
+  }
+}

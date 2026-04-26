@@ -9,6 +9,9 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 body {
